@@ -1,0 +1,8 @@
+name: ECJackpot
+version: '${project.version}'
+main: fr.edencraft.ecjackpot.ECJackpot
+api-version: 1.18
+prefix: ECJackpot
+authors: [ NayeOne ]
+description: Create jackpot using items or your server currency.
+website: https://github.com/EdenStacks
