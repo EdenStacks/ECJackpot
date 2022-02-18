@@ -1,7 +1,7 @@
 package fr.edencraft.ecjackpot.jackpot;
 
 import fr.edencraft.ecjackpot.ECJackpot;
-import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.permissions.Permission;
@@ -31,6 +31,8 @@ public class Jackpot {
 	private final List<String> listParticipantLore;
 	private final List<String> jackpotRulesLore;
 	private final List<String> jackpotRewardLore;
+
+	private JackpotProvider jackpotProvider;
 
 
 	/**
@@ -104,7 +106,7 @@ public class Jackpot {
 			ECJackpot.getINSTANCE().log(Level.WARNING, "menu.jackpot-reward not set for " + this.name);
 		}
 
-		if (commandName != null) {
+		if (isValid() && commandName != null) {
 			Permission permission = new Permission("ecjackpot.command." + commandName);
 			permission.setDefault(PermissionDefault.OP);
 			permission.setDescription("Used to open " + name);
@@ -117,8 +119,26 @@ public class Jackpot {
 					permission,
 					this
 			));
+
+			this.jackpotProvider = new JackpotProvider(this);
 		}
 
+	}
+
+	public boolean isValid() {
+		List<String> validCurrencies = Arrays.asList("ITEM", "MONEY");
+		if (!validCurrencies.contains(getCurrencyType())) return false;
+
+		Material material = Material.getMaterial(getMaterial());
+		if (getCurrencyType().equalsIgnoreCase("ITEM") && (material == null || material.isAir())) return false;
+
+		if (getAmountNeeded() < 1) return false;
+
+		return true;
+	}
+
+	public JackpotProvider getJackpotProvider() {
+		return jackpotProvider;
 	}
 
 	public File getJackpotFile() {

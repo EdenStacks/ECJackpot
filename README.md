@@ -6,7 +6,7 @@ Tested on paper 1.18.1.
 
 
 ## Dependency
-- WIP
+- SmartInvs 1.2.7
 
 
 ## Configuration

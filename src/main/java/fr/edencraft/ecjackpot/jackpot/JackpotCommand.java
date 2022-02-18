@@ -6,6 +6,7 @@ import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.hover.content.Text;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 import org.bukkit.permissions.Permission;
 import org.jetbrains.annotations.NotNull;
 
@@ -28,27 +29,30 @@ public class JackpotCommand extends Command {
 
 	@Override
 	public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+		if (!(sender instanceof Player player)) {
+			sender.sendMessage("§cLa commande est reservé aux joueurs.");
+			return true;
+		}
 		if (args.length == 1 && args[0].equalsIgnoreCase("zizi")) {
 			ComponentBuilder componentBuilder = new ComponentBuilder("Ahah très drôle gros con.");
 			BaseComponent component = componentBuilder.getComponent(0);
 			component.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("§6Baisse les yeux !")));
-			sender.spigot().sendMessage(component);
+			player.spigot().sendMessage(component);
 			return true;
 		}
 		if (args.length > 0) {
-			sender.sendMessage(super.usageMessage);
+			player.sendMessage(super.usageMessage);
 			return true;
 		}
-		if (getPermission() != null && !sender.hasPermission(getPermission())) {
-			sender.sendMessage("§cTu n'as pas la permission d'utiliser cette commande.\n  §8• §e" + getPermission());
+		if (getPermission() != null && !player.hasPermission(getPermission())) {
+			player.sendMessage("§cTu n'as pas la permission d'utiliser cette commande.\n  §8• §e" + getPermission());
 			return true;
 		}
-		return commandStuff(sender, commandLabel, args);
+		return commandStuff(player, commandLabel, args);
 	}
 
-	public boolean commandStuff(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
-		sender.sendMessage("Opening " + jackpot.getName());
-		sender.sendMessage(jackpot.toString());
-		return false;
+	public boolean commandStuff(@NotNull Player player, @NotNull String commandLabel, @NotNull String[] args) {
+		jackpot.getJackpotProvider().openInv(player);
+		return true;
 	}
 }

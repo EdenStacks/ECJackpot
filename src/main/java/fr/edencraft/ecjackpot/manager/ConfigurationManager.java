@@ -1,5 +1,6 @@
 package fr.edencraft.ecjackpot.manager;
 
+import fr.edencraft.ecjackpot.ECJackpot;
 import fr.edencraft.ecjackpot.content.ConfigContent;
 import fr.edencraft.ecjackpot.content.PinataContent;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -146,7 +147,7 @@ public class ConfigurationManager {
     }
 
     private void log(Level level, String message) {
-        plugin.getLogger().log(Level.INFO, "[" + plugin.getName() + "] " + message);
+        ECJackpot.getINSTANCE().log(level, message);
     }
 
     public Map<File, FileConfiguration> getFilesMap() {

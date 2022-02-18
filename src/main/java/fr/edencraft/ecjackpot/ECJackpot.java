@@ -2,11 +2,14 @@ package fr.edencraft.ecjackpot;
 
 import fr.edencraft.ecjackpot.jackpot.Jackpot;
 import fr.edencraft.ecjackpot.manager.ConfigurationManager;
+import fr.minuskube.inv.InventoryManager;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
 
@@ -15,6 +18,9 @@ public final class ECJackpot extends JavaPlugin {
 	public static ECJackpot INSTANCE;
 
 	private ConfigurationManager configurationManager;
+	private InventoryManager inventoryManager;
+
+	private final List<Jackpot> jackpots = new ArrayList<>();
 
 	@Override
 	public void onEnable() {
@@ -24,6 +30,9 @@ public final class ECJackpot extends JavaPlugin {
 
 		this.configurationManager = new ConfigurationManager(this);
 		this.configurationManager.setupFiles();
+
+		this.inventoryManager = new InventoryManager(this);
+		this.inventoryManager.init();
 
 		loadJackpots();
 
@@ -37,7 +46,14 @@ public final class ECJackpot extends JavaPlugin {
 		try {
 			Arrays.stream(Objects.requireNonNull(jackpotFolder.listFiles())).forEach(file -> {
 				if (file.getName().endsWith(".yml")) {
-					System.out.println(new Jackpot(file));
+					Jackpot jackpot = new Jackpot(file);
+					if (!jackpot.isValid()) {
+						log(Level.WARNING, "Jackpot file " + file.getName() + " is not valid.");
+						return;
+					}
+					jackpots.add(jackpot);
+					log(Level.INFO, "Jackpot " + jackpot.getName() + " has been loaded successfully" +
+							" from " + file.getName());
 				}
 			});
 		} catch (NullPointerException e) {
@@ -61,5 +77,13 @@ public final class ECJackpot extends JavaPlugin {
 
 	public ConfigurationManager getConfigurationManager() {
 		return configurationManager;
+	}
+
+	public List<Jackpot> getJackpots() {
+		return jackpots;
+	}
+
+	public InventoryManager getInventoryManager() {
+		return inventoryManager;
 	}
 }
