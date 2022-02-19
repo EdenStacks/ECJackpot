@@ -4,13 +4,13 @@ import fr.edencraft.ecjackpot.jackpot.Jackpot;
 import fr.edencraft.ecjackpot.manager.ConfigurationManager;
 import fr.minuskube.inv.InventoryManager;
 import org.bukkit.Bukkit;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.logging.Level;
 
 public final class ECJackpot extends JavaPlugin {
@@ -20,7 +20,7 @@ public final class ECJackpot extends JavaPlugin {
 	private ConfigurationManager configurationManager;
 	private InventoryManager inventoryManager;
 
-	private final List<Jackpot> jackpots = new ArrayList<>();
+	private List<Jackpot> jackpots;
 
 	@Override
 	public void onEnable() {
@@ -34,17 +34,21 @@ public final class ECJackpot extends JavaPlugin {
 		this.inventoryManager = new InventoryManager(this);
 		this.inventoryManager.init();
 
-		loadJackpots();
+		this.jackpots = loadJackpots();
 
 		log(Level.INFO, "ECJackpot enabled. (took " + (System.currentTimeMillis() - delay) + "ms)");
 
 	}
 
-	private void loadJackpots() {
+	private List<Jackpot> loadJackpots() {
 		File jackpotFolder = new File(getDataFolder().getAbsolutePath() + File.separatorChar + "jackpots");
+		List<Jackpot> jackpots = new ArrayList<>();
 
-		try {
-			Arrays.stream(Objects.requireNonNull(jackpotFolder.listFiles())).forEach(file -> {
+		if (jackpotFolder.listFiles() != null) {
+			File[] files = jackpotFolder.listFiles();
+			assert files != null;
+
+			Arrays.stream(files).forEach(file -> {
 				if (file.getName().endsWith(".yml")) {
 					Jackpot jackpot = new Jackpot(file);
 					if (!jackpot.isValid()) {
@@ -52,14 +56,14 @@ public final class ECJackpot extends JavaPlugin {
 						return;
 					}
 					jackpots.add(jackpot);
+					configurationManager.getFilesMap().put(file, YamlConfiguration.loadConfiguration(file));
 					log(Level.INFO, "Jackpot " + jackpot.getName() + " has been loaded successfully" +
 							" from " + file.getName());
 				}
 			});
-		} catch (NullPointerException e) {
-			log(Level.INFO, "No jackpot file found.");
 		}
 
+		return jackpots;
 	}
 
 	@Override
@@ -68,7 +72,16 @@ public final class ECJackpot extends JavaPlugin {
 	}
 
 	public void log(Level level, String message) {
-		Bukkit.getLogger().log(level, "[" + getPlugin(ECJackpot.class).getName() + "] " + message);
+		switch (level.getName()) {
+			default -> Bukkit.getLogger()
+					.log(level, "[" + getPlugin(ECJackpot.class).getName() + "] " + message);
+			case "INFO" -> Bukkit.getLogger()
+					.log(level, "§a[" + getPlugin(ECJackpot.class).getName() + "] " + message);
+			case "WARNING" -> Bukkit.getLogger()
+					.log(level, "§e[" + getPlugin(ECJackpot.class).getName() + "] " + message);
+			case "SEVERE" -> Bukkit.getLogger()
+					.log(level, "§c[" + getPlugin(ECJackpot.class).getName() + "] " + message);
+		}
 	}
 
 	public static ECJackpot getINSTANCE() {

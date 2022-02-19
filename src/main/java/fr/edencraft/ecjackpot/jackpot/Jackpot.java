@@ -111,14 +111,21 @@ public class Jackpot {
 			permission.setDefault(PermissionDefault.OP);
 			permission.setDescription("Used to open " + name);
 
-			ECJackpot.getINSTANCE().getServer().getCommandMap().register(commandName, new JackpotCommand(
+			JackpotCommand jackpotCommand = new JackpotCommand(
 					commandName,
 					"Use it to open " + this.name + " jackpot",
-					"§cUtilisez §e/" + commandName,
+					"§cUtilisez §e/" + commandName + " §a<info|add>",
 					List.of(commandName),
 					permission,
 					this
-			));
+			);
+
+			if (ECJackpot.getINSTANCE().getServer().getCommandMap().register(commandName, jackpotCommand)) {
+				ECJackpot.getINSTANCE().log(Level.INFO, "La commande " + commandName + " has been registered.");
+			} else {
+				ECJackpot.getINSTANCE().log(Level.WARNING, "La commande " + commandName + " hasn't been registered.");
+			}
+
 
 			this.jackpotProvider = new JackpotProvider(this);
 		}
@@ -135,6 +142,10 @@ public class Jackpot {
 		if (getAmountNeeded() < 1) return false;
 
 		return true;
+	}
+
+	public FileConfiguration getFileConfiguration() {
+		return ECJackpot.getINSTANCE().getConfigurationManager().getConfigurationFile(jackpotFile.getName());
 	}
 
 	public JackpotProvider getJackpotProvider() {
