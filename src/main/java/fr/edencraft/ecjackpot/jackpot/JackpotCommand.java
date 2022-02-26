@@ -126,6 +126,7 @@ public class JackpotCommand extends Command {
 			currency = "$";
 		}
 
+		jackpot.addParticipation(player, amount);
 		player.sendMessage( "§aAjout de §e" + amount + currency);
 		return true;
 	}

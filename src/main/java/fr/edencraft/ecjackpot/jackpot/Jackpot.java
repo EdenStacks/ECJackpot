@@ -1,23 +1,25 @@
 package fr.edencraft.ecjackpot.jackpot;
 
+import com.google.gson.*;
 import fr.edencraft.ecjackpot.ECJackpot;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionDefault;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 
 public class Jackpot {
 
 	private final File jackpotFile;
-
 	private final String displayName;
 	private final String name;
 	private final String commandName;
@@ -31,9 +33,12 @@ public class Jackpot {
 	private final List<String> listParticipantLore;
 	private final List<String> jackpotRulesLore;
 	private final List<String> jackpotRewardLore;
-
 	private JackpotProvider jackpotProvider;
 
+	// Data
+	private final List<JackpotParticipant> participants = new ArrayList<>();
+	private UUID lastParticipant = null;
+	private int pot = 0;
 
 	/**
 	 * Build a {@link Jackpot} instance using a {@link File} in YAML format.
@@ -121,11 +126,16 @@ public class Jackpot {
 			);
 
 			if (ECJackpot.getINSTANCE().getServer().getCommandMap().register(commandName, jackpotCommand)) {
-				ECJackpot.getINSTANCE().log(Level.INFO, "La commande " + commandName + " has been registered.");
+				ECJackpot.getINSTANCE().log(Level.INFO, "The " + commandName + " command has been registered.");
 			} else {
-				ECJackpot.getINSTANCE().log(Level.WARNING, "La commande " + commandName + " hasn't been registered.");
+				ECJackpot.getINSTANCE().log(Level.WARNING, "The " + commandName + " command hasn't been registered.");
 			}
 
+			if (loadData()) {
+				ECJackpot.getINSTANCE().log(Level.INFO, "Data successfully loaded for " + this.name + ".");
+			} else {
+				ECJackpot.getINSTANCE().log(Level.WARNING, "Unable to load data for " + this.name + ".");
+			}
 
 			this.jackpotProvider = new JackpotProvider(this);
 		}
@@ -139,7 +149,52 @@ public class Jackpot {
 		Material material = Material.getMaterial(getMaterial());
 		if (getCurrencyType().equalsIgnoreCase("ITEM") && (material == null || material.isAir())) return false;
 
-		if (getAmountNeeded() < 1) return false;
+		return getAmountNeeded() >= 1;
+	}
+
+	/**
+	 * @return true if successfully loaded else false.
+	 */
+	private boolean loadData() {
+		if (!isValid() || !getDataFile().exists()) return false;
+
+		File dataFile = getDataFile();
+
+		GsonBuilder gsonBuilder = new GsonBuilder();
+		gsonBuilder.serializeNulls();
+		gsonBuilder.setPrettyPrinting();
+		Gson gson = gsonBuilder.create();
+
+		try {
+			JsonElement jsonElement = JsonParser.parseReader(new FileReader(dataFile));
+			this.lastParticipant = UUID.fromString(jsonElement.getAsJsonObject().get("lastParticipant").getAsString());
+			this.pot = jsonElement.getAsJsonObject().get("pot").getAsInt();
+			JsonArray participants = jsonElement.getAsJsonObject().get("participants").getAsJsonArray();
+
+			for (JsonElement participant : participants) {
+				UUID uuid = UUID.fromString(participant.getAsJsonObject().get("uuid").getAsString());
+
+				HashMap<Long, Integer> participationLog = new HashMap<>();
+				Set<Map.Entry<String, JsonElement>> entries = participant
+						.getAsJsonObject()
+						.get("participationLog")
+						.getAsJsonObject()
+						.entrySet();
+
+				for (Map.Entry<String, JsonElement> entry : entries) {
+					participationLog.put(
+							Long.valueOf(entry.getKey()),
+							Integer.valueOf(entry.getValue().toString())
+					);
+				}
+
+				OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(uuid);
+				JackpotParticipant jackpotParticipant = new JackpotParticipant(offlinePlayer, participationLog);
+				this.participants.add(jackpotParticipant);
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
 
 		return true;
 	}
@@ -208,6 +263,16 @@ public class Jackpot {
 		return jackpotRewardLore;
 	}
 
+	public File getDataFolder() {
+		return new File(
+				ECJackpot.getINSTANCE().getDataFolder().getAbsolutePath() + File.separatorChar + "data"
+		);
+	}
+
+	public File getDataFile() {
+		return new File(getDataFolder().getAbsolutePath() + File.separatorChar + name + ".json");
+	}
+
 	@Override
 	public String toString() {
 		return "Jackpot{" +
@@ -228,4 +293,88 @@ public class Jackpot {
 				'}';
 	}
 
+	public void saveData() {
+		File dataFolder = getDataFolder();
+
+		if (dataFolder.mkdir()) {
+			ECJackpot.getINSTANCE().log(
+					Level.INFO,
+					dataFolder.getName() + " has been created successfully."
+			);
+		}
+
+		File dataFile = getDataFile();
+
+		try {
+			if (dataFile.createNewFile()) {
+				ECJackpot.getINSTANCE().log(
+						Level.INFO,
+						dataFile.getName() + " has been created successfully."
+				);
+			}
+		} catch (IOException ignored) {}
+
+		Map<String, Object> elementsMap = new HashMap<>();
+		elementsMap.put("pot", this.pot);
+		elementsMap.put("lastParticipant", this.lastParticipant);
+		elementsMap.put("participants", this.participants);
+
+		GsonBuilder gsonBuilder = new GsonBuilder();
+		gsonBuilder.serializeNulls();
+		gsonBuilder.setPrettyPrinting();
+		Gson gson = gsonBuilder.create();
+
+		try {
+			JsonElement jsonElement = gson.toJsonTree(elementsMap);
+			OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(dataFile), StandardCharsets.UTF_8);
+			String jsonContent = gson.toJson(jsonElement);
+
+			writer.write(jsonContent);
+			writer.flush();
+			writer.close();
+
+			ECJackpot.getINSTANCE().log(
+					Level.INFO,
+					dataFile.getName() + " has been updated successfully."
+			);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+	}
+
+	public void addParticipation(OfflinePlayer offlinePlayer, int amount) {
+		AtomicReference<JackpotParticipant> participantAtomicReference;
+		participantAtomicReference = new AtomicReference<>(null);
+
+		this.participants.forEach(value -> {
+			if (value.getUuid().equals(offlinePlayer.getUniqueId())) {
+				participantAtomicReference.set(value);
+			}
+		});
+
+		if (participantAtomicReference.get() == null) {
+			JackpotParticipant participant = new JackpotParticipant(offlinePlayer);
+			participantAtomicReference.set(participant);
+			this.participants.add(participant);
+		}
+
+		JackpotParticipant participant = participantAtomicReference.get();
+		participant.addParticipation(amount);
+
+		this.lastParticipant = participant.getUuid();
+		this.pot += amount;
+	}
+
+	public List<JackpotParticipant> getParticipants() {
+		return participants;
+	}
+
+	public UUID getLastParticipant() {
+		return lastParticipant;
+	}
+
+	public int getPot() {
+		return pot;
+	}
 }

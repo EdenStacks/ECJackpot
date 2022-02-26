@@ -1,5 +1,7 @@
 package fr.edencraft.ecjackpot;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import fr.edencraft.ecjackpot.jackpot.Jackpot;
 import fr.edencraft.ecjackpot.manager.ConfigurationManager;
 import fr.minuskube.inv.InventoryManager;
@@ -15,7 +17,7 @@ import java.util.logging.Level;
 
 public final class ECJackpot extends JavaPlugin {
 
-	public static ECJackpot INSTANCE;
+	private static ECJackpot INSTANCE;
 
 	private ConfigurationManager configurationManager;
 	private InventoryManager inventoryManager;
@@ -66,9 +68,14 @@ public final class ECJackpot extends JavaPlugin {
 		return jackpots;
 	}
 
+	private void saveJackpots() {
+		jackpots.forEach(Jackpot::saveData);
+	}
+
 	@Override
 	public void onDisable() {
 		this.configurationManager.saveFiles();
+		this.saveJackpots();
 	}
 
 	public void log(Level level, String message) {

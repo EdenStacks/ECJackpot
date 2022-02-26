@@ -88,7 +88,11 @@ public class JackpotProvider implements InventoryProvider {
 		ItemStack jackpotPot = new ItemStack(Material.CAULDRON);
 		ItemMeta itemMeta = jackpotPot.getItemMeta();
 		List<String> lore = List.of(new ColoredText(
-				fileConfiguration.getString("menu.jackpot-information")).treat().split("\n")
+				fileConfiguration.getString("menu.jackpot-information"))
+				.treat()
+				.replaceAll("\\{pot_content}", "" + jackpot.getPot())
+				.replaceAll("\\{pot_max}", "" + jackpot.getAmountNeeded())
+				.split("\n")
 		);
 		itemMeta.setLore(lore);
 		itemMeta.setDisplayName(new ColoredText(jackpot.getDisplayName()).treat());
