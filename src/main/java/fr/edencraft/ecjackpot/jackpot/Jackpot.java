@@ -7,9 +7,10 @@ import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
 import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionDefault;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -142,6 +143,32 @@ public class Jackpot {
 
 	}
 
+	/**
+	 * @return colored progress bar (ex: §a■■■§f■■■■■■■ ~= 30%)
+	 */
+	public String getProgressBar() {
+		int progressPercentage = (int) getProgressPercentage();
+		StringBuilder stringBuilder = new StringBuilder();
+
+		for (int i = 0; i < 10; i++) {
+			if (progressPercentage - 10 >= 0) {
+				stringBuilder.append("§a■");
+				progressPercentage -= 10;
+			} else {
+				stringBuilder.append("§f■");
+			}
+		}
+		stringBuilder.append("§r");
+		return  stringBuilder.toString();
+	}
+
+	/**
+	 * @return percentage value of the progress.
+	 */
+	public double getProgressPercentage() {
+		return ((double) this.pot * 100) / (double) amountNeeded;
+	}
+
 	public boolean isValid() {
 		List<String> validCurrencies = Arrays.asList("ITEM", "MONEY");
 		if (!validCurrencies.contains(getCurrencyType())) return false;
@@ -159,11 +186,6 @@ public class Jackpot {
 		if (!isValid() || !getDataFile().exists()) return false;
 
 		File dataFile = getDataFile();
-
-		GsonBuilder gsonBuilder = new GsonBuilder();
-		gsonBuilder.serializeNulls();
-		gsonBuilder.setPrettyPrinting();
-		Gson gson = gsonBuilder.create();
 
 		try {
 			JsonElement jsonElement = JsonParser.parseReader(new FileReader(dataFile));
@@ -207,20 +229,12 @@ public class Jackpot {
 		return jackpotProvider;
 	}
 
-	public File getJackpotFile() {
-		return jackpotFile;
-	}
-
 	public String getDisplayName() {
 		return displayName;
 	}
 
 	public String getName() {
 		return name;
-	}
-
-	public String getCommandName() {
-		return commandName;
 	}
 
 	public String getCurrencyType() {
@@ -233,34 +247,6 @@ public class Jackpot {
 
 	public int getAmountNeeded() {
 		return amountNeeded;
-	}
-
-	public String getRewardCommand() {
-		return rewardCommand;
-	}
-
-	public List<String> getJackpotInformationLore() {
-		return jackpotInformationLore;
-	}
-
-	public List<String> getLastParticipantLore() {
-		return lastParticipantLore;
-	}
-
-	public List<String> getBestParticipantLore() {
-		return bestParticipantLore;
-	}
-
-	public List<String> getListParticipantLore() {
-		return listParticipantLore;
-	}
-
-	public List<String> getJackpotRulesLore() {
-		return jackpotRulesLore;
-	}
-
-	public List<String> getJackpotRewardLore() {
-		return jackpotRewardLore;
 	}
 
 	public File getDataFolder() {
@@ -304,6 +290,12 @@ public class Jackpot {
 		}
 
 		File dataFile = getDataFile();
+		if (this.pot == 0) {
+			if (dataFile.exists()) {
+				boolean delete = dataFile.delete();
+			}
+			return;
+		}
 
 		try {
 			if (dataFile.createNewFile()) {
@@ -364,17 +356,99 @@ public class Jackpot {
 
 		this.lastParticipant = participant.getUuid();
 		this.pot += amount;
-	}
 
-	public List<JackpotParticipant> getParticipants() {
-		return participants;
-	}
-
-	public UUID getLastParticipant() {
-		return lastParticipant;
+		if (this.pot == this.amountNeeded) {
+			executeRewardCommands();
+			reset();
+		}
 	}
 
 	public int getPot() {
 		return pot;
+	}
+
+	/**
+	 * @return ranking of this {@link Jackpot}.
+	 */
+	public HashMap<Integer, JackpotParticipant> getRankingMap() {
+		List<JackpotParticipant> participantList = new ArrayList<>(this.participants);
+		HashMap<Integer, JackpotParticipant> rankingMap = new HashMap<>();
+		int i = 1;
+
+		while (!participantList.isEmpty()) {
+			JackpotParticipant bestParticipant = getBestParticipant(participantList);
+			rankingMap.put(i++, bestParticipant);
+			participantList.remove(bestParticipant);
+		}
+
+		return rankingMap;
+	}
+
+	/**
+	 * @return best participant of this {@link Jackpot} or null if no best participant in this {@link Jackpot}.
+	 */
+	@Nullable
+	public JackpotParticipant getBestParticipant() {
+		int bestAmount = 0;
+		JackpotParticipant bestParticipant = null;
+
+		for (JackpotParticipant participant : this.participants) {
+			if (participant.getParticipationAmount() > bestAmount) {
+				bestAmount = participant.getParticipationAmount();
+				bestParticipant = participant;
+			}
+		}
+
+		return bestParticipant;
+	}
+
+	/**
+	 * @return best participant of this {@link Jackpot} or null if no best participant in the list.
+	 */
+	@Nullable
+	public JackpotParticipant getBestParticipant(List<JackpotParticipant> participants) {
+		int bestAmount = 0;
+		JackpotParticipant bestParticipant = null;
+
+		for (JackpotParticipant participant : participants) {
+			if (participant.getParticipationAmount() > bestAmount) {
+				bestAmount = participant.getParticipationAmount();
+				bestParticipant = participant;
+			}
+		}
+
+		return bestParticipant;
+	}
+
+	@Nullable
+	public JackpotParticipant getLastParticipant() {
+		for (JackpotParticipant participant : this.participants) {
+			if (participant.getUuid().equals(this.lastParticipant)) {
+				return participant;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * @return amount of currency needed to end the {@link Jackpot}.
+	 */
+	public int getAmountMissing() {
+		return this.amountNeeded - this.pot;
+	}
+
+	public void executeRewardCommands() {
+		FileConfiguration cfg = getFileConfiguration();
+		List<String> commandsList = cfg.getStringList("reward-commands");
+
+		for (String command : commandsList) {
+			Bukkit.dispatchCommand(Bukkit.getServer().getConsoleSender(), command);
+		}
+	}
+
+	public void reset() {
+		this.pot = 0;
+		this.participants.clear();
+		this.lastParticipant = null;
 	}
 }

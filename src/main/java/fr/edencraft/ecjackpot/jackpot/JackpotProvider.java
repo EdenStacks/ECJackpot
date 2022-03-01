@@ -8,11 +8,14 @@ import fr.minuskube.inv.content.InventoryContents;
 import fr.minuskube.inv.content.InventoryProvider;
 import fr.minuskube.inv.content.SlotPos;
 import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.*;
 
@@ -90,8 +93,10 @@ public class JackpotProvider implements InventoryProvider {
 		List<String> lore = List.of(new ColoredText(
 				fileConfiguration.getString("menu.jackpot-information"))
 				.treat()
-				.replaceAll("\\{pot_content}", "" + jackpot.getPot())
-				.replaceAll("\\{pot_max}", "" + jackpot.getAmountNeeded())
+					.replaceAll("\\{progress_bar}", jackpot.getProgressBar())
+					.replaceAll("\\{progress_percentage}", "" + jackpot.getProgressPercentage() + "%") // TODO: Formater sous cette forme (ex: 1,89%)
+					.replaceAll("\\{pot_content}", "" + jackpot.getPot())
+					.replaceAll("\\{pot_max}", "" + jackpot.getAmountNeeded())
 				.split("\n")
 		);
 		itemMeta.setLore(lore);
@@ -101,35 +106,75 @@ public class JackpotProvider implements InventoryProvider {
 			player.sendMessage("Clicked");
 		});
 
+		JackpotParticipant jackpotParticipant = jackpot.getLastParticipant();
 		ItemStack jackpotLastParticipant = new ItemStack(Material.PLAYER_HEAD);
-		itemMeta = jackpotLastParticipant.getItemMeta();
-		lore = List.of(new ColoredText(
-				fileConfiguration.getString("menu.last-participant")).treat().split("\n")
-		);
-		itemMeta.setLore(lore);
-		itemMeta.setDisplayName(new ColoredText("&3Dernier participant: ").treat());
-		jackpotLastParticipant.setItemMeta(itemMeta);
+		SkullMeta skullMeta = (SkullMeta) jackpotLastParticipant.getItemMeta();
+		if (jackpotParticipant != null) {
+			skullMeta.setOwningPlayer(Bukkit.getOfflinePlayer(jackpotParticipant.getUuid()));
+
+			lore = List.of(new ColoredText(
+					fileConfiguration.getString("menu.last-participant"))
+					.treat()
+						.replaceAll("\\{name}", jackpotParticipant.getName())
+						.replaceAll("\\{amount}", "" + jackpotParticipant.getLastParticipationAmount())
+						.replaceAll("\\{currency_name}", jackpot.getCurrencyType()) // TODO: afficher le symbole de la devise si la cagnotte est en mode MONEY sinon le type de l'item.
+						.replaceAll("\\{time_elapsed}",
+								"" + ((System.currentTimeMillis() - jackpotParticipant.getLastParticipationMillis()) / (1000 * 60))
+						)
+					.split("\n")
+			);
+		} else {
+			lore = List.of("§cAucun joueur n'a encore participé.");
+		}
+		skullMeta.setLore(lore);
+		skullMeta.setDisplayName(new ColoredText("&3Dernier participant: ").treat());
+		jackpotLastParticipant.setItemMeta(skullMeta);
 		ClickableItem clickableLastParticipant = ClickableItem.of(jackpotLastParticipant, inventoryClickEvent -> {
 			player.sendMessage("Clicked");
 		});
 
+		JackpotParticipant bestParticipant = jackpot.getBestParticipant();
 		ItemStack jackpotBestParticipant = new ItemStack(Material.PLAYER_HEAD);
-		itemMeta = jackpotBestParticipant.getItemMeta();
-		lore = List.of(new ColoredText(
-				fileConfiguration.getString("menu.best-participant")).treat().split("\n")
-		);
-		itemMeta.setLore(lore);
-		itemMeta.setDisplayName(new ColoredText("&3Plus grand donateur: ").treat());
-		jackpotBestParticipant.setItemMeta(itemMeta);
+		skullMeta = (SkullMeta) jackpotBestParticipant.getItemMeta();
+		if (bestParticipant != null) {
+			skullMeta.setOwningPlayer(Bukkit.getOfflinePlayer(bestParticipant.getUuid()));
+
+			lore = List.of(new ColoredText(
+					fileConfiguration.getString("menu.best-participant")).treat()
+							.replaceAll("\\{name}", bestParticipant.getName())
+							.replaceAll("\\{amount}", "" + bestParticipant.getParticipationAmount())
+							.replaceAll("\\{currency_name}", jackpot.getCurrencyType()) // TODO: afficher le symbole de la devise si la cagnotte est en mode MONEY sinon le type de l'item.
+					.split("\n")
+			);
+		} else {
+			lore = List.of("§cIl n'y a pas encore de meilleur participant.");
+		}
+		skullMeta.setLore(lore);
+		skullMeta.setDisplayName(new ColoredText("&3Plus grand donateur: ").treat());
+		jackpotBestParticipant.setItemMeta(skullMeta);
 		ClickableItem clickableBestParticipant = ClickableItem.of(jackpotBestParticipant, inventoryClickEvent -> {
 			player.sendMessage("Clicked");
 		});
 
 		ItemStack jackpotListParticipant = new ItemStack(Material.PAPER);
 		itemMeta = jackpotListParticipant.getItemMeta();
-		lore = List.of(new ColoredText(
-				fileConfiguration.getString("menu.list-participant")).treat().split("\n")
-		);
+		String loreString = new ColoredText(fileConfiguration.getString("menu.list-participant")).treat();
+		HashMap<Integer, JackpotParticipant> rankingMap = jackpot.getRankingMap();
+
+		for (Map.Entry<Integer, JackpotParticipant> rank : rankingMap.entrySet()) {
+			loreString = loreString.replaceAll(
+					"\\{name_" + rank.getKey() + "}",
+					rank.getValue().getName()
+			);
+			loreString = loreString.replaceAll(
+					"\\{amount_" + rank.getKey() + "}",
+					"" + rank.getValue().getParticipationAmount()
+			);
+		}
+		loreString = loreString.replaceAll("\\{name_[1-9]}|\\{name_10}", "§c✖");
+		loreString = loreString.replaceAll("\\{amount_[1-9]}|\\{amount_10}", "");
+
+		lore = List.of(new ColoredText(loreString).treat().split("\n"));
 		itemMeta.setLore(lore);
 		itemMeta.setDisplayName(new ColoredText("&3Liste de participants: ").treat());
 		jackpotListParticipant.setItemMeta(itemMeta);
@@ -155,7 +200,7 @@ public class JackpotProvider implements InventoryProvider {
 				fileConfiguration.getString("menu.jackpot-reward")).treat().split("\n")
 		);
 		itemMeta.setLore(lore);
-		itemMeta.setDisplayName(new ColoredText("&3Règles du jackpot: ").treat());
+		itemMeta.setDisplayName(new ColoredText("&3Récompense(s) du jackpot: ").treat());
 		jackpotReward.setItemMeta(itemMeta);
 		ClickableItem clickableReward = ClickableItem.of(jackpotReward, inventoryClickEvent -> {
 			player.sendMessage("Clicked");

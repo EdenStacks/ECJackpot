@@ -114,6 +114,12 @@ public class JackpotCommand extends Command {
 				return true;
 			}
 
+			if (amount > jackpot.getAmountMissing()) {
+				player.sendMessage("§cVous allez faire déborder la cagnotte ! Il manque §e" + jackpot.getAmountMissing() +
+						" §cpour remplir le pot.");
+				return true;
+			}
+
 			int supressedCount = removeFromPlayerInventory(
 					player.getInventory(),
 					material,
@@ -126,8 +132,8 @@ public class JackpotCommand extends Command {
 			currency = "$";
 		}
 
-		jackpot.addParticipation(player, amount);
 		player.sendMessage( "§aAjout de §e" + amount + currency);
+		jackpot.addParticipation(player, amount);
 		return true;
 	}
 

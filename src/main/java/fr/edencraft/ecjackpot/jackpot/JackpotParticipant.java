@@ -1,7 +1,6 @@
 package fr.edencraft.ecjackpot.jackpot;
 
 import org.bukkit.OfflinePlayer;
-import org.bukkit.entity.Player;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -25,16 +24,42 @@ public class JackpotParticipant {
 		this.participationLog = logs;
 	}
 
+	public int getParticipationAmount() {
+		int amount = 0;
+
+		for (int value : this.participationLog.values()) {
+			amount += value;
+		}
+
+		return amount;
+	}
+
+	/**
+	 * @return time in millis of last participation of this {@link JackpotParticipant}.
+	 */
+	public long getLastParticipationMillis() {
+		if (this.participationLog.isEmpty()) return 0;
+
+		long lastParticipationTime = 0;
+		for (long value : this.participationLog.keySet()) {
+			lastParticipationTime = Math.max(value, lastParticipationTime);
+		}
+		return lastParticipationTime;
+	}
+
+	/**
+	 * @return amount of the last participation of this {@link JackpotParticipant}.
+	 */
+	public int getLastParticipationAmount() {
+		return this.participationLog.get(getLastParticipationMillis());
+	}
+
 	public String getName() {
 		return name;
 	}
 
 	public UUID getUuid() {
 		return uuid;
-	}
-
-	public Map<Long, Integer> getParticipationLog() {
-		return participationLog;
 	}
 
 	public void addParticipation(int amount) {

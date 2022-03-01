@@ -1,7 +1,5 @@
 package fr.edencraft.ecjackpot;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import fr.edencraft.ecjackpot.jackpot.Jackpot;
 import fr.edencraft.ecjackpot.manager.ConfigurationManager;
 import fr.minuskube.inv.InventoryManager;
@@ -97,10 +95,6 @@ public final class ECJackpot extends JavaPlugin {
 
 	public ConfigurationManager getConfigurationManager() {
 		return configurationManager;
-	}
-
-	public List<Jackpot> getJackpots() {
-		return jackpots;
 	}
 
 	public InventoryManager getInventoryManager() {

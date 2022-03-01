@@ -82,41 +82,6 @@ public class ConfigurationManager {
         });
     }
 
-    public void saveFile(File file) {
-        if (filesMap.containsKey(file)) {
-            try {
-                filesMap.get(file).save(file);
-            } catch (IOException ignored) {}
-        }
-    }
-
-    public void saveFile(String name) {
-        if (getConfigurationFile(name) == null) return;
-        filesMap.forEach((file, fileConfiguration) -> {
-            if (file.getName().equalsIgnoreCase(name)) {
-                try {
-                    fileConfiguration.save(file);
-                } catch (IOException ignored) {}
-            }
-        });
-    }
-
-    public void reloadFiles(){
-        filesMap.forEach((file, fileConfiguration) -> {
-            try {
-                fileConfiguration.load(file);
-            } catch (IOException | InvalidConfigurationException ignored) {}
-        });
-    }
-
-    public void reloadFile(File file) {
-        if (filesMap.containsKey(file)) {
-            try {
-                filesMap.get(file).load(file);
-            } catch (IOException | InvalidConfigurationException ignored) {}
-        }
-    }
-
     public void reloadFile(String name) {
         if (getConfigurationFile(name) == null) return;
         filesMap.forEach((file, fileConfiguration) -> {
@@ -126,14 +91,6 @@ public class ConfigurationManager {
                 } catch (IOException | InvalidConfigurationException ignored) {}
             }
         });
-    }
-
-    private File getFile(String dirPath, String fileName) {
-        return new File(dirPath, fileName);
-    }
-
-    private FileConfiguration getFileConfigurationFromFile(File file){
-        return filesMap.getOrDefault(file, null);
     }
 
     public FileConfiguration getConfigurationFile(String name){
