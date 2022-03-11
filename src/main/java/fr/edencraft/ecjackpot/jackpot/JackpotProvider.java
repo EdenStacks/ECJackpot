@@ -10,14 +10,15 @@ import fr.minuskube.inv.content.SlotPos;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class JackpotProvider implements InventoryProvider {
 
@@ -41,12 +42,11 @@ public class JackpotProvider implements InventoryProvider {
 	/**
 	 * Put static item into the inventory.
 	 *
-	 * @param player player that opened the inventory.
+	 * @param player   player that opened the inventory.
 	 * @param contents {@link InventoryContents} if the inventory.
 	 */
 	private void setDecorationContent(Player player, InventoryContents contents) {
-		Map<SlotPos, Material> stainedGlassPaneMap= new HashMap<>()
-		{{
+		Map<SlotPos, Material> stainedGlassPaneMap = new HashMap<>() {{
 			put(new SlotPos(0, 1), Material.PINK_STAINED_GLASS_PANE);
 			put(new SlotPos(0, 7), Material.PINK_STAINED_GLASS_PANE);
 			put(new SlotPos(1, 0), Material.PINK_STAINED_GLASS_PANE);
@@ -93,10 +93,10 @@ public class JackpotProvider implements InventoryProvider {
 		List<String> lore = List.of(new ColoredText(
 				fileConfiguration.getString("menu.jackpot-information"))
 				.treat()
-					.replaceAll("\\{progress_bar}", jackpot.getProgressBar())
-					.replaceAll("\\{progress_percentage}", "" + jackpot.getProgressPercentage() + "%") // TODO: Formater sous cette forme (ex: 1,89%)
-					.replaceAll("\\{pot_content}", "" + jackpot.getPot())
-					.replaceAll("\\{pot_max}", "" + jackpot.getAmountNeeded())
+				.replaceAll("\\{progress_bar}", jackpot.getProgressBar())
+				.replaceAll("\\{progress_percentage}", "" + jackpot.getProgressPercentage() + "%") // TODO: Formater sous cette forme (ex: 1,89%)
+				.replaceAll("\\{pot_content}", "" + jackpot.getPot())
+				.replaceAll("\\{pot_max}", "" + jackpot.getAmountNeeded())
 				.split("\n")
 		);
 		itemMeta.setLore(lore);
@@ -115,12 +115,12 @@ public class JackpotProvider implements InventoryProvider {
 			lore = List.of(new ColoredText(
 					fileConfiguration.getString("menu.last-participant"))
 					.treat()
-						.replaceAll("\\{name}", jackpotParticipant.getName())
-						.replaceAll("\\{amount}", "" + jackpotParticipant.getLastParticipationAmount())
-						.replaceAll("\\{currency_name}", jackpot.getCurrencyType()) // TODO: afficher le symbole de la devise si la cagnotte est en mode MONEY sinon le type de l'item.
-						.replaceAll("\\{time_elapsed}",
-								"" + ((System.currentTimeMillis() - jackpotParticipant.getLastParticipationMillis()) / (1000 * 60))
-						)
+					.replaceAll("\\{name}", jackpotParticipant.getName())
+					.replaceAll("\\{amount}", "" + jackpotParticipant.getLastParticipationAmount())
+					.replaceAll("\\{currency_name}", jackpot.getCurrencyType()) // TODO: afficher le symbole de la devise si la cagnotte est en mode MONEY sinon le type de l'item.
+					.replaceAll("\\{time_elapsed}",
+							"" + ((System.currentTimeMillis() - jackpotParticipant.getLastParticipationMillis()) / (1000 * 60))
+					)
 					.split("\n")
 			);
 		} else {
@@ -141,9 +141,9 @@ public class JackpotProvider implements InventoryProvider {
 
 			lore = List.of(new ColoredText(
 					fileConfiguration.getString("menu.best-participant")).treat()
-							.replaceAll("\\{name}", bestParticipant.getName())
-							.replaceAll("\\{amount}", "" + bestParticipant.getParticipationAmount())
-							.replaceAll("\\{currency_name}", jackpot.getCurrencyType()) // TODO: afficher le symbole de la devise si la cagnotte est en mode MONEY sinon le type de l'item.
+					.replaceAll("\\{name}", bestParticipant.getName())
+					.replaceAll("\\{amount}", "" + bestParticipant.getParticipationAmount())
+					.replaceAll("\\{currency_name}", jackpot.getCurrencyType()) // TODO: afficher le symbole de la devise si la cagnotte est en mode MONEY sinon le type de l'item.
 					.split("\n")
 			);
 		} else {

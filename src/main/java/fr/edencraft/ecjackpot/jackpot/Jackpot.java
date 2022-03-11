@@ -2,6 +2,7 @@ package fr.edencraft.ecjackpot.jackpot;
 
 import com.google.gson.*;
 import fr.edencraft.ecjackpot.ECJackpot;
+import fr.edencraft.ecjackpot.utils.JsonUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -9,11 +10,12 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionDefault;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
@@ -34,10 +36,9 @@ public class Jackpot {
 	private final List<String> listParticipantLore;
 	private final List<String> jackpotRulesLore;
 	private final List<String> jackpotRewardLore;
-	private JackpotProvider jackpotProvider;
-
 	// Data
 	private final List<JackpotParticipant> participants = new ArrayList<>();
+	private JackpotProvider jackpotProvider;
 	private UUID lastParticipant = null;
 	private int pot = 0;
 
@@ -62,7 +63,7 @@ public class Jackpot {
 		try {
 			this.jackpotInformationLore.addAll(Arrays
 					.asList(Objects.requireNonNull(fileConfiguration.getString("menu.jackpot-information"))
-					.split("\n")));
+							.split("\n")));
 		} catch (NullPointerException e) {
 			ECJackpot.getINSTANCE().log(Level.WARNING, "menu.jackpot-information not set for " + this.name);
 		}
@@ -144,6 +145,24 @@ public class Jackpot {
 	}
 
 	/**
+	 * @return best participant of this {@link Jackpot} or null if no best participant in the list.
+	 */
+	@Nullable
+	public static JackpotParticipant getBestParticipant(List<JackpotParticipant> participants) {
+		int bestAmount = 0;
+		JackpotParticipant bestParticipant = null;
+
+		for (JackpotParticipant participant : participants) {
+			if (participant.getParticipationAmount() > bestAmount) {
+				bestAmount = participant.getParticipationAmount();
+				bestParticipant = participant;
+			}
+		}
+
+		return bestParticipant;
+	}
+
+	/**
 	 * @return colored progress bar (ex: §a■■■§f■■■■■■■ ~= 30%)
 	 */
 	public String getProgressBar() {
@@ -159,7 +178,7 @@ public class Jackpot {
 			}
 		}
 		stringBuilder.append("§r");
-		return  stringBuilder.toString();
+		return stringBuilder.toString();
 	}
 
 	/**
@@ -252,6 +271,7 @@ public class Jackpot {
 	public File getDataFolder() {
 		return new File(
 				ECJackpot.getINSTANCE().getDataFolder().getAbsolutePath() + File.separatorChar + "data"
+						+ File.separatorChar + "jackpots"
 		);
 	}
 
@@ -304,7 +324,8 @@ public class Jackpot {
 						dataFile.getName() + " has been created successfully."
 				);
 			}
-		} catch (IOException ignored) {}
+		} catch (IOException ignored) {
+		}
 
 		Map<String, Object> elementsMap = new HashMap<>();
 		elementsMap.put("pot", this.pot);
@@ -316,23 +337,7 @@ public class Jackpot {
 		gsonBuilder.setPrettyPrinting();
 		Gson gson = gsonBuilder.create();
 
-		try {
-			JsonElement jsonElement = gson.toJsonTree(elementsMap);
-			OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(dataFile), StandardCharsets.UTF_8);
-			String jsonContent = gson.toJson(jsonElement);
-
-			writer.write(jsonContent);
-			writer.flush();
-			writer.close();
-
-			ECJackpot.getINSTANCE().log(
-					Level.INFO,
-					dataFile.getName() + " has been updated successfully."
-			);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
+		JsonUtils.writeJsonData(dataFile, gson, elementsMap);
 	}
 
 	public void addParticipation(OfflinePlayer offlinePlayer, int amount) {
@@ -402,24 +407,6 @@ public class Jackpot {
 		return bestParticipant;
 	}
 
-	/**
-	 * @return best participant of this {@link Jackpot} or null if no best participant in the list.
-	 */
-	@Nullable
-	public JackpotParticipant getBestParticipant(List<JackpotParticipant> participants) {
-		int bestAmount = 0;
-		JackpotParticipant bestParticipant = null;
-
-		for (JackpotParticipant participant : participants) {
-			if (participant.getParticipationAmount() > bestAmount) {
-				bestAmount = participant.getParticipationAmount();
-				bestParticipant = participant;
-			}
-		}
-
-		return bestParticipant;
-	}
-
 	@Nullable
 	public JackpotParticipant getLastParticipant() {
 		for (JackpotParticipant participant : this.participants) {
@@ -439,10 +426,21 @@ public class Jackpot {
 
 	public void executeRewardCommands() {
 		FileConfiguration cfg = getFileConfiguration();
-		List<String> commandsList = cfg.getStringList("reward-commands");
+		List<String> globalCommandsList = cfg.getStringList("reward-commands-global");
 
-		for (String command : commandsList) {
+		for (String command : globalCommandsList) {
 			Bukkit.dispatchCommand(Bukkit.getServer().getConsoleSender(), command);
+		}
+
+		List<String> privateCommandList = cfg.getStringList("reward-commands-each-participant");
+		for (JackpotParticipant participant : this.participants) {
+			for (String command : privateCommandList) {
+				if (participant.isOnline()) {
+					participant.executeCommand(command);
+				} else {
+					participant.addWaitingCommand(command);
+				}
+			}
 		}
 	}
 

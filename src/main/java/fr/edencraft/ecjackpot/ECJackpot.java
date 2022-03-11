@@ -22,6 +22,10 @@ public final class ECJackpot extends JavaPlugin {
 
 	private List<Jackpot> jackpots;
 
+	public static ECJackpot getINSTANCE() {
+		return INSTANCE;
+	}
+
 	@Override
 	public void onEnable() {
 		long delay = System.currentTimeMillis();
@@ -87,10 +91,6 @@ public final class ECJackpot extends JavaPlugin {
 			case "SEVERE" -> Bukkit.getLogger()
 					.log(level, "§c[" + getPlugin(ECJackpot.class).getName() + "] " + message);
 		}
-	}
-
-	public static ECJackpot getINSTANCE() {
-		return INSTANCE;
 	}
 
 	public ConfigurationManager getConfigurationManager() {

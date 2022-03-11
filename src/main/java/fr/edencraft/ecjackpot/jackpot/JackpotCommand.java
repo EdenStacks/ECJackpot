@@ -132,14 +132,14 @@ public class JackpotCommand extends Command {
 			currency = "$";
 		}
 
-		player.sendMessage( "§aAjout de §e" + amount + currency);
+		player.sendMessage("§aAjout de §e" + amount + currency);
 		jackpot.addParticipation(player, amount);
 		return true;
 	}
 
 	/**
 	 * @param playerInventory inventory of the player.
-	 * @param material material to count.
+	 * @param material        material to count.
 	 * @return amount of a material in the {@link PlayerInventory}.
 	 */
 	private int countMaterialInPlayerInventory(PlayerInventory playerInventory, Material material) {
@@ -158,8 +158,8 @@ public class JackpotCommand extends Command {
 	 * If no more material in {@link PlayerInventory} it does not throw error.
 	 *
 	 * @param playerInventory inventory of the player.
-	 * @param material material to remove.
-	 * @param amount amount to remove.
+	 * @param material        material to remove.
+	 * @param amount          amount to remove.
 	 * @return number of supressed item.
 	 */
 	private int removeFromPlayerInventory(PlayerInventory playerInventory, Material material, int amount) {
